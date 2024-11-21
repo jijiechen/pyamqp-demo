@@ -19,7 +19,6 @@ from azure.servicebus.aio import ServiceBusClient
 
 SESSION_QUEUE_NAME = os.environ["SERVICEBUS_SESSION_QUEUE_NAME"]
 SESSION_ID = os.environ["SERVICEBUS_SESSION_ID"]
-FULLY_QUALIFIED_NAMESPACE = os.environ["SERVICEBUS_FULLY_QUALIFIED_NAMESPACE"]
 sys_print=print
 
 def print(*args, **kw):
