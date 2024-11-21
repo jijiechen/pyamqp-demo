@@ -18,7 +18,7 @@ from azure.servicebus.aio import ServiceBusClient
 sys_print=print
 SESSION_QUEUE_NAME = os.environ["SERVICEBUS_SESSION_QUEUE_NAME"]
 SESSION_ID = os.environ["SERVICEBUS_SESSION_ID"]
-FULLY_QUALIFIED_NAMESPACE = os.environ["SERVICEBUS_FULLY_QUALIFIED_NAMESPACE"]
+SENDING_SHUTDOWN = os.environ.get("SENDING_SHUTDOWN", False)
 
 def print(*args, **kw):
    sys_print("[%s]" % (datetime.now()),*args, **kw)
@@ -46,30 +46,26 @@ async def send_batch_message(sender):
             break
     await sender.send_messages(batch_message)
 
-
-async def receive_batch_messages(receiver):
-    session = receiver.session
-    await session.set_state("START")
-    print("Session state:", await session.get_state())
-    received_msgs = await receiver.receive_messages(max_message_count=10, max_wait_time=5)
-    for msg in received_msgs:
-        print(str(msg))
-        await receiver.complete_message(msg)
-        await session.renew_lock()
-    await session.set_state("END")
-    print("Session state:", await session.get_state())
+async def send_shutdown_message(sender):
+    message = ServiceBusMessage("shutdown", session_id=SESSION_ID)
+    await sender.send_messages(message)
 
 async def send(client):
     while True:
         sender = client.get_queue_sender(queue_name=SESSION_QUEUE_NAME)
         async with sender:
-            print('Sending new messages to session ' + SESSION_ID + ' in queue ' + SESSION_QUEUE_NAME)
-            await send_single_message(sender)
-            await send_a_list_of_messages(sender)
-            await send_batch_message(sender)
-            print('Waiting for 10 seconds')
-            await asyncio.sleep(10)
-            sys_print('')
+            if isinstance(SENDING_SHUTDOWN, str) and SENDING_SHUTDOWN.lower() == "true":
+                print('Sending ShutDown message to session ' + SESSION_ID + ' in queue ' + SESSION_QUEUE_NAME)
+                await send_shutdown_message(sender)
+                break
+            else:
+                print('Sending new messages to session ' + SESSION_ID + ' in queue ' + SESSION_QUEUE_NAME)
+                await send_single_message(sender)
+                await send_a_list_of_messages(sender)
+                await send_batch_message(sender)
+                print('Waiting for 10 seconds')
+                await asyncio.sleep(10)
+                sys_print('')
 
 
 async def main():
