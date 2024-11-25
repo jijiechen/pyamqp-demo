@@ -37,15 +37,15 @@ async def receive_batch_messages(receiver):
     continue_receiving = True
     while continue_receiving:
         print("Session state:", await session.get_state())
-        received_msgs = await receiver.receive_messages(max_message_count=10, max_wait_time=300)
+        received_msgs = await receiver.receive_messages(max_message_count=10, max_wait_time=30)
         for msg in received_msgs:
             print('new message: ' + str(msg))
             await receiver.complete_message(msg)
-            await session.renew_lock()
             if str(msg) == "shutdown":
                 continue_receiving = False
                 await receiver.session.set_state("CLOSED")
                 break
+        await session.renew_lock()
     await session.set_state("END")
     print("Session state:", await session.get_state())
 
